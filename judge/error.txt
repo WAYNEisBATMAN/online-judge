@@ -1,0 +1,31 @@
+code.cpp: In function ‘int main()’:
+code.cpp:5:2: error: ‘cin’ was not declared in this scope
+  cin>>n;
+  ^
+code.cpp:5:2: note: suggested alternative:
+In file included from /usr/include/x86_64-linux-gnu/c++/5/bits/stdc++.h:74:0,
+                 from code.cpp:1:
+/usr/include/c++/5/iostream:60:18: note:   ‘std::cin’
+   extern istream cin;  /// Linked to standard input
+                  ^
+code.cpp:7:3: error: ‘cout’ was not declared in this scope
+   cout<<"hi"<<endl;
+   ^
+code.cpp:7:3: note: suggested alternative:
+In file included from /usr/include/x86_64-linux-gnu/c++/5/bits/stdc++.h:74:0,
+                 from code.cpp:1:
+/usr/include/c++/5/iostream:61:18: note:   ‘std::cout’
+   extern ostream cout;  /// Linked to standard output
+                  ^
+code.cpp:7:15: error: ‘endl’ was not declared in this scope
+   cout<<"hi"<<endl;
+               ^
+code.cpp:7:15: note: suggested alternative:
+In file included from /usr/include/c++/5/istream:39:0,
+                 from /usr/include/c++/5/sstream:38,
+                 from /usr/include/c++/5/complex:45,
+                 from /usr/include/x86_64-linux-gnu/c++/5/bits/stdc++.h:66,
+                 from code.cpp:1:
+/usr/include/c++/5/ostream:590:5: note:   ‘std::endl’
+     endl(basic_ostream<_CharT, _Traits>& __os)
+     ^

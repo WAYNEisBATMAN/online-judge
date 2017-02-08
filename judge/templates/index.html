@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<html>
+
+<head>
+    <title>Home</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.2.6/ace.js" type="text/javascript" charset="utf-8"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-cookie/1.4.1/jquery.cookie.js"></script>
+    <link rel="shortcut icon" type="image/png" href="/static/img/favicon.png" />
+    <!-- JavaScript -->
+    {% csrf_token %}
+    <script type="text/javascript">
+    $(document).ready(function() {
+
+        /* AJAX SETUP FOR DJANGO */
+        var csrftoken = $.cookie('csrftoken');
+
+        function csrfSafeMethod(method) {
+            // these HTTP methods do not require CSRF protection
+            return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
+        }
+
+        $.ajaxSetup({
+            beforeSend: function(xhr, settings) {
+                if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                    xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                }
+            }
+        });
+
+        var result_div = $('#result');
+
+        /* Valid Extensions */
+        var valid_code_extensions = ["py", "c", "cpp", "java"];
+        var valid_io_extensions = ["txt"];
+
+        $('#mode').on('change', function(e) {
+            e.preventDefault();
+            var mode = $('option:selected').attr('value');
+            editor.getSession().setMode(mode);
+        });
+
+        $(document).on('click', '#upload_input_form #upload_input', function(e) {
+            e.preventDefault();
+            console.log("TES");
+            $("#upload_input_file").click();
+        });
+
+        $(document).on('change', '#upload_input_form #upload_input_file', function(e) {
+            e.preventDefault();
+            var uploadFile = $('#upload_input_file');
+            var ext = uploadFile.val().split(".").pop().toLowerCase();
+            if ($.inArray(ext, valid_io_extensions) === -1) {
+                $("#alert_message").html("Select a txt file!");
+                $("#alert_message").slideDown(500);
+                $("#alert_message").delay(3000).slideUp(500);
+                return false;
+            }
+            $('#custom_input').prop("disabled", true);
+            $('#custom_input').val($(this).val().split('\\').pop());
+            return true;
+        });
+
+        $(document).on('click', '#upload_output_form #upload_output', function(e) {
+            e.preventDefault();
+            console.log("TESO");
+            $("#upload_output_file").click();
+        });
+
+        $(document).on('change', '#upload_output_form #upload_output_file', function(e) {
+            e.preventDefault();
+            var uploadFile = $('#upload_output_file');
+            var ext = uploadFile.val().split(".").pop().toLowerCase();
+            if ($.inArray(ext, valid_io_extensions) === -1) {
+                $("#alert_message").html("Select a txt file!");
+                $("#alert_message").slideDown(500);
+                $("#alert_message").delay(3000).slideUp(500);
+                return false;
+            }
+            $('#custom_output').prop("disabled", true);
+            $('#custom_output').val($(this).val().split('\\').pop());
+            return true;
+        });
+
+        $(document).on('click', '#upload_code_form #upload_code', function(e) {
+            e.preventDefault();
+            $("#upload_code_file").click();
+        });
+
+        $(document).on('change', '#upload_code_form #upload_code_file', function(e) {
+            e.preventDefault();
+            var uploadFile = $('#upload_code_file');
+            var ext = uploadFile.val().split(".").pop().toLowerCase();
+            if ($.inArray(ext, valid_code_extensions) === -1) {
+                $("#alert_message").html("Select a valid file to upload!");
+                $("#alert_message").slideDown(500);
+                $("#alert_message").delay(3000).slideUp(500);
+                return false;
+            }
+            var formdata = new FormData();
+            formdata.append("fileupload", uploadFile[0].files[0]);
+            formdata.append("ext", ext);
+            $.ajax({
+                url: "/upload_code/",
+                type: "POST",
+                dataType: "json",
+                cache: false,
+                contentType: false,
+                processData: false,
+                data: formdata,
+                success: function(result) {
+                    if (result.response) {
+                        editor.setValue(result.code);
+                        var mode = $("#" + result.language).attr("value");
+                        console.log(result.language);
+                        editor.getSession().setMode(mode);
+                        $("#" + result.language).prop('selected', true);
+                    }
+                },
+                error: function(result) {
+                    console.error(result.responseText);
+                    $("#alert_message").html("Something went wrong!");
+                    $("#alert_message").slideDown(500);
+                    $("#alert_message").delay(3000).slideUp(500);
+                }
+            });
+            return true;
+        });
+
+        $(document).on('click', '#submit_button', function(e) {
+            e.preventDefault();
+            result_div.html("");
+            result_div.append("Uploading...\n");
+            result_div[0].scrollTop = result_div[0].scrollHeight;
+            var inputFile = $('#upload_input_file');
+            var outputFile = $('#upload_output_file');
+            var code = editor.getValue();
+            var language = $('#mode').find('option:selected').attr("id");
+            if (inputFile.val() && outputFile.val()) {
+                var formdata = new FormData();
+                formdata.append("inputFile", inputFile[0].files[0]);
+                formdata.append("outputFile", outputFile[0].files[0]);
+                formdata.append("code", code);
+                formdata.append("language", language);
+                uploadCodeAjax(formdata);
+            } else {
+                $("#alert_message").html("Please select input and output files!");
+                $("#alert_message").slideDown(500);
+                $("#alert_message").delay(3000).slideUp(500);
+            }
+        });
+
+        function uploadCodeAjax(formdata) {
+            $.ajax({
+                url: "/upload_files/",
+                type: "POST",
+                dataType: "json",
+                cache: false,
+                contentType: false,
+                processData: false,
+                data: formdata,
+                success: function(result) {
+                    if (result.response) {
+                        console.log("uploaded!");
+                        result_div.append("Upload Successful!\n");
+                        result_div.append("Compiling Source Code...\n");
+                        compileAjax(formdata);
+                    } else {
+                        result_div.append("Upload Failed!\n");
+                        $("#alert_message").html(result.error);
+                        $("#alert_message").slideDown(500);
+                        $("#alert_message").delay(3000).slideUp(500);
+                    }
+                },
+                error: function(result) {
+                    console.error(result.responseText);
+                    result_div.append("Upload Failed!\n");
+                    $("#alert_message").html("Something went wrong!");
+                    $("#alert_message").slideDown(500);
+                    $("#alert_message").delay(3000).slideUp(500);
+                }
+            });
+        }
+
+        function compileAjax(formdata) {
+            $.ajax({
+                url: "/compile_code/",
+                type: "POST",
+                dataType: "json",
+                cache: false,
+                contentType: false,
+                processData: false,
+                data: formdata,
+                success: function(result) {
+                    if (result.response) {
+                        console.log("compiled!");
+                        result_div.append("Compile Successful!\n");
+                        result_div.append("Testing Code... Please Wait...\n");
+                        executeAjax(formdata);
+                    } else {
+                        console.log("compilation error!");
+                        result_div.append("Compilation Error:\n\n");
+                        result_div.scrollTop = result_div.scrollHeight;
+                        result_div.append(result.message);
+                    }
+                },
+                error: function(result) {
+                    console.error(result.responseText);
+
+                    $("#alert_message").html("Something went wrong!");
+                    $("#alert_message").slideDown(500);
+                    $("#alert_message").delay(3000).slideUp(500);
+                }
+            });
+        }
+
+        function executeAjax(formdata) {
+            $.ajax({
+                url: "/execute_code/",
+                type: "POST",
+                dataType: "json",
+                cache: false,
+                contentType: false,
+                processData: false,
+                data: formdata,
+                success: function(result) {
+                    if (result.response) {
+                        console.log("executed!");
+                        result_div.append("Correct Answer\n");
+                    } else {
+                        console.log("execution error!");
+                        result_div.append("Execution Error:\n\n");
+                        result_div.append(result.message)
+                    }
+                },
+                error: function(result) {
+                    console.error(result.responseText);
+
+                    $("#alert_message").html("Something went wrong!");
+                    $("#alert_message").slideDown(500);
+                    $("#alert_message").delay(3000).slideUp(500);
+                }
+            });
+        }
+    });
+    </script>
+    <!-- CSS -->
+    <style type="text/css">
+    body {
+        background-color: #FFFFE5;
+    }
+    
+    #editor {
+        position: relative;
+        height: 400px;
+        width: 600px;
+    }
+    
+    #label_input,
+    #submit_button,
+    #result {
+        margin-left: 50px;
+    }
+    
+    #label_output {
+        margin-left: 100px;
+    }
+    
+    #custom_input {
+        margin-left: 50px;
+        width: 200px;
+        height: 150px;
+        resize: none;
+    }
+    
+    #custom_output {
+        margin-left: 100px;
+        width: 200px;
+        height: 150px;
+        resize: none;
+    }
+    
+    #submit_button {
+        width: 125%;
+    }
+    
+    #result {
+        width: 450px;
+        height: 150px;
+        background-color: rgb(0, 0, 0);
+        resize: none;
+        overflow: auto;
+        color: white;
+        padding-left: 5px;
+    }
+    
+    #upload_output,
+    #upload_input {
+        position: absolute;
+    }
+    
+    #instructions_button {
+        position: fixed;
+        top: 20px;
+        right: 20px
+    }
+    
+    .alert_parent {
+        text-align: center;
+        position: fixed;
+        width: 100%;
+    }
+    
+    .alert {
+        width: 30%;
+        margin: 10px auto;
+        z-index: 999999;
+        display: none;
+    }
+    
+    .blinking-cursor {
+        font-weight: 100;
+        font-size: 15px;
+        color: #2E3D48;
+        -webkit-animation: 1s blink step-end infinite;
+        -moz-animation: 1s blink step-end infinite;
+        -ms-animation: 1s blink step-end infinite;
+        -o-animation: 1s blink step-end infinite;
+        animation: 1s blink step-end infinite;
+    }
+    
+    @keyframes "blink" {
+        from,
+        to {
+            color: transparent;
+        }
+        50% {
+            color: white;
+        }
+    }
+    
+    @-moz-keyframes blink {
+        from,
+        to {
+            color: transparent;
+        }
+        50% {
+            color: white;
+        }
+    }
+    
+    @-webkit-keyframes "blink" {
+        from,
+        to {
+            color: transparent;
+        }
+        50% {
+            color: white;
+        }
+    }
+    
+    @-ms-keyframes "blink" {
+        from,
+        to {
+            color: transparent;
+        }
+        50% {
+            color: white;
+        }
+    }
+    
+    @-o-keyframes "blink" {
+        from,
+        to {
+            color: transparent;
+        }
+        50% {
+            color: white;
+        }
+    }
+    </style>
+</head>
+
+<body>
+    <div class="alert_parent">
+        <div class="alert alert-info" id="alert_message">
+        </div>
+    </div>
+    <div class="container">
+        <div class="page-header">
+            <a href="/" class="pull-left"><img src="/static/img/favicon.png" style="width: 50px; height: 40px; margin-right: 10px;"></a>
+            <h1><a href="/" style="text-decoration: none; color: #000000;"><span>Online Judge</span></a></h1>
+        </div>
+        <div>
+            <button id="instructions_button" class="btn btn-success " data-toggle="modal" data-target="#instructions_modal">Instructions</button>
+        </div>
+        <div class="modal fade" id="instructions_modal" role="dialog">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal">X</button>
+                        <h4 class="modal-title">Instructions</h4>
+                    </div>
+                    <div class="modal-body">
+                        <ul>
+                            <li>
+                                <h4>Enter your code in the editor, press save button to save your code.</h4>
+                            </li>
+                            <li>
+                                <h4>You can enter input either using the input box (maximum 250 characters allowed) or you can use an input file to upload. Just click on upload button to upload the file.</h4>
+                            </li>
+                            <li>
+                                <h4>If you wish to enter input using a file, it is mandatory to upload the output file too.</h4>
+                            </li>
+                            <li>
+                                <h4>If you just want to check the output of your code, leave the output box empty and the output will be displayed the output box.</h4>
+                            </li>
+                            <li>
+                                <h4>If you will enter anything in the output box, it will be matched with the output of your code.</h4>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <label for="mode">Please select the desired language:</label>
+        <div class="row">
+            <div class="languages col-md-1">
+                <form id="language_form" method="post">
+                    <select name="mode" id="mode">
+                        <option value="ace/mode/c_cpp" id="c">C</option>
+                        <option value="ace/mode/c_cpp" id="cpp">C++</option>
+                        <option value="ace/mode/python" id="py2">Python 2</option>
+                        <option value="ace/mode/python" id="py3">Python 3</option>
+                        <option value="ace/mode/java" id="java">Java</option>
+                    </select>
+                </form>
+            </div>
+            <div class="col-md-1">
+                <form enctype="multipart/form-data" id="upload_code_form">
+                    <input type="file" id="upload_code_file" class="hidden">
+                    <button id="upload_code" class="btn btn-info btn-xs">Upload Code</button>
+                    <input type="submit" class="hidden">
+                </form>
+            </div>
+            <div class="col-md-1">
+                <button id="save_code" class="btn btn-success btn-xs">Save Code</button>
+            </div>
+        </div>
+        <br>
+        <div class="row">
+            <div class="col-md-8" id="editor"></div>
+            <div class="col-md-4">
+                <div class="row">
+                    <div class="col-md-6">
+                        <form enctype="multipart/form-data" id="upload_input_form">
+                            <label id="label_input" for="custom_input">Input:</label>
+                            <input type="file" class="hidden" id="upload_input_file">
+                            <button id="upload_input" class="btn btn-info btn-xs">Upload</button>
+                            <textarea placeholder="Enter input or upload a &quot;.txt&quot; file" name="custom_input" id="custom_input"></textarea>
+                        </form>
+                    </div>
+                    <div class="col-md-6">
+                        <form enctype="multipart/form-data" id="upload_output_form">
+                            <label id="label_output" for="custom_output">Output:</label>
+                            <input type="file" class="hidden" id="upload_output_file">
+                            <button id="upload_output" class="btn btn-info btn-xs">Upload</button>
+                            <textarea placeholder="Enter output or upload a &quot;.txt&quot; file" name="custom_output" id="custom_output"></textarea>
+                        </form>
+                    </div>
+                </div>
+                <br>
+                <div class="row">
+                    <div class="col-md-12">
+                        <button id="submit_button" class="btn btn-success">Test My Code!</button>
+                    </div>
+                </div>
+                <br>
+                <div class="row">
+                    <div class="col-md-12">
+                        <pre id="result"></pre>
+                        <!--<span class="blinking-cursor">|</span>-->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Editor JavaScript -->
+    <script type="text/javascript">
+    var editor = ace.edit("editor");
+    editor.setTheme("ace/theme/crimson_editor");
+    editor.getSession().setMode("ace/mode/c_cpp");
+    editor.setFontSize("14px");
+    editor.$blockScrolling = Infinity;
+    </script>
+</body>
+
+</html>
